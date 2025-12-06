@@ -348,19 +348,41 @@
 
 
 <script>
-// ====== TAB SWITCH ======
+// ====== TAB SWITCH + NAV SWITCH ======
 document.querySelectorAll(".tab").forEach(tab => {
   tab.addEventListener("click", () => {
+
+    // reset active
     document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
     document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
 
+    // aktifkan tab
     tab.classList.add("active");
     document.getElementById("tab-" + tab.dataset.tab).classList.add("active");
+
+    // ====== SWITCH BOTTOM NAV ======
+    const navNormal = document.getElementById("bottom-nav-normal");
+    const navFlash  = document.getElementById("bottom-nav-flash");
+
+    if (tab.dataset.tab === "offline") {
+      navNormal.style.display = "flex";
+      navFlash.style.display = "none";
+    }
+    else if (tab.dataset.tab === "flash") {
+      navNormal.style.display = "none";
+      navFlash.style.display = "flex";
+    }
+    else {
+      // repo / token → semua nav hilang
+      navNormal.style.display = "none";
+      navFlash.style.display = "none";
+    }
   });
 });
 
+
 /* ============================================================
-   LOGIKA HAPUS SEMUA PRODUK (PAKE MODAL)
+   MODAL HAPUS SEMUA PRODUK
 ============================================================ */
 
 // buka modal
@@ -388,29 +410,8 @@ function deleteAllProducts() {
   showToast("Semua produk berhasil dihapus!");
 }
 
-document.querySelectorAll(".tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    // hapus active
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-    document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
-
-    // aktifkan tab yang diklik
-    tab.classList.add("active");
-    const content = document.getElementById("tab-" + tab.dataset.tab);
-    content.classList.add("active");
-
-    // switch bottom-nav
-    if(tab.dataset.tab === "flash"){
-      document.getElementById("bottom-nav-normal").style.display = "none";
-      document.getElementById("bottom-nav-flash").style.display = "flex";
-    } else {
-      document.getElementById("bottom-nav-normal").style.display = "flex";
-      document.getElementById("bottom-nav-flash").style.display = "none";
-    }
-  });
-});
-
 </script>
+
 
 <script>
 // ==============================================
