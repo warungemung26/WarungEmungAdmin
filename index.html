@@ -6,6 +6,7 @@
 <title></title>
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/bottom-nav.css">
+<link rel="stylesheet" href="css/flash.css">
 
 
 
@@ -236,15 +237,20 @@
     </div>
   </div>
 
-  <!-- TABEL FLASH -->
-  	<button onclick="loadFlashFromRepo()">🔄 Sync Flash Sale dari Repo</button>
-  <table id="flashTable" border="1" style="width:100%; margin-top:10px;">
+<!-- TABEL FLASH -->
+<button onclick="loadFlashFromRepo()">🔄 Sync Flash Sale dari Repo</button>
+<!-- TABEL FLASH -->
+<button onclick="loadFlashFromRepo()">🔄 Sync Flash Sale dari Repo</button>
+<div class="table-wrap">
+  <table id="flashTable">
     <thead>
       <tr>
+        <th>No</th>
         <th>Nama</th>
         <th>Harga Normal</th>
         <th>Harga Flash</th>
         <th>Stok</th>
+        <th>Gambar</th>
         <th>Label</th>
         <th>Flash Sampai</th>
         <th>Aksi</th>
@@ -252,8 +258,7 @@
     </thead>
     <tbody></tbody>
   </table>
-
-
+</div>
 
 <!-- ============================================================
      OUTPUT JSON FLASH
@@ -349,6 +354,7 @@
 <!-- ============= MODAL KONFIRMASI ============= -->
 <div id="confirmModal">
   <div id="confirmBox">
+  	
     <h3>⚠ Hapus Semua Produk?</h3>
     <p>Semua data produk offline akan dihapus permanen.</p>
 
@@ -357,8 +363,20 @@
   </div>
 </div>
 
+<!-- Modal Konfirmasi Hapus Semua -->
+<div id="modalConfirm" class="modal" style="display:none;">
+  <div class="modal-content">
+    <p id="modalMessage">Apakah yakin ingin menghapus semua item?</p>
+    <div class="modal-actions">
+      <button id="modalCancel">Batal</button>
+      <button id="modalConfirmBtn">Hapus</button>
+    </div>
+  </div>
+</div>
+
+
 <!-- TOAST -->
-<div id="toast"></div>
+<div id="toast" class="toast"></div>
 
   <!-- ================== JAVASCRIPT ================== -->
   <!-- Core / data -->
@@ -381,9 +399,8 @@
   <button class="nav-btn" onclick="scrollToFlashInput()">📝 Input Flash</button>
   <button class="nav-btn" onclick="generateAndScrollFlashJSON()">💾 Generate JSON Flash</button>
   <button class="nav-btn" onclick="openConfirmDeleteFlash()">🗑 Hapus Semua Flash</button>
-  <button class="nav-btn" onclick="scrollToFlashJSON()">📤 Load Dari GitHub</button>
+ <button class="nav-btn" onclick="triggerLoadFlash()">📤 Load Dari GitHub</button>
 </div>
-
 
 <script>
 // ====== TAB SWITCH + NAV SWITCH ======
@@ -691,38 +708,73 @@ async function uploadFlashJSONSimple() {
   }
 }
 
-/* ===== Load flash dari repo (opsional) ===== */
-async function loadFlashFromRepoSimple() {
+/* ============================================================
+   LOAD FLASH DARI REPO (UNIVERSAL)
+   Bisa dipakai tombol manapun, normalisasi field otomatis
+============================================================ */
+async function loadFlashFromRepoUnified() {
   try {
-    const token = document.getElementById('githubToken').value.trim();
-    if (!token) return alert('⚠️ Masukkan GitHub Token Anda!');
+    const token = (document.getElementById("githubToken")?.value || "").trim();
+    if (!token) return alert("⚠ Masukkan GitHub Token dulu.");
 
-    const owner = 'WarungEmung26';
-    const repo  = 'WarungEmung';
-    const path  = 'data/flash.json';
-    const branch = 'main';
+    const owner = "WarungEmung26";   // sesuaikan
+    const repo  = "WarungEmung";     // sesuaikan
+    const path  = "data/flash.json"; // file repo
+    const branch = "main";
 
-    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`, {
-      headers: { Authorization: 'token ' + token }
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`;
+
+    const res = await fetch(url, {
+      headers: {
+        "Authorization": `token ${token}`,
+        "Accept": "application/vnd.github.v3+json"
+      }
     });
 
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    if (!res.ok) throw new Error(`HTTP ${res.status} — gagal ambil file`);
 
     const data = await res.json();
-    if (!data || !data.content) throw new Error('File tidak berisi content');
+    if (!data.content) throw new Error("File tidak berisi konten");
 
-    const decoded = decodeURIComponent(escape(atob(data.content)));
-    const json = JSON.parse(decoded);
+    // decode UTF-8 dari Base64
+const decoded = new TextDecoder("utf-8").decode(Uint8Array.from(atob(data.content), c => c.charCodeAt(0)));
+let json = JSON.parse(decoded);
 
-    window.flashProducts = json;
-    if (typeof renderFlashTable === 'function') renderFlashTable();
+    // normalisasi field supaya renderFlashTable aman
+    json = json.map(p => ({
+      id: p.id || "flash-" + Date.now(),
+      name: p.name || p.product || "",
+      price_normal: Number(p.price_normal ?? p.price ?? 0),
+      price_flash: Number(p.price_flash ?? p.flashPrice ?? 0),
+      stock: Number(p.stock ?? 0),
+      img: p.img || p.image || "",
+      label: p.label || p.description || "",
+      flash_until: p.flash_until || p.until || "",
+      category: "flash"
+    }));
 
-    alert('✅ Flash berhasil dimuat dari repo!');
+    // assign global & localStorage
+    window.flashProducts = flashProducts = json;
+    localStorage.setItem("flashProducts", JSON.stringify(flashProducts));
+
+    // render tabel
+    if (typeof renderFlashTable === "function") renderFlashTable();
+
+    alert("✅ Flash Sale berhasil dimuat dari repo!");
   } catch (err) {
-    console.error('loadFlashFromRepoSimple error:', err);
-    alert('❌ Load Flash gagal: ' + (err.message || err));
+    console.error("LOAD FLASH ERROR:", err);
+    alert("❌ Gagal memuat Flash dari repo: " + (err.message || err));
   }
 }
+
+/* ============================================================
+   Pasang tombol bottom-nav & tombol atas tabel ke fungsi ini
+============================================================ */
+const btnLoadFlashTop = document.querySelector("#tab-flash button[onclick*='loadFlashFromRepo']");
+if (btnLoadFlashTop) btnLoadFlashTop.onclick = loadFlashFromRepoUnified;
+
+const btnLoadFlashNav = document.getElementById("btnLoadFlash");
+if (btnLoadFlashNav) btnLoadFlashNav.addEventListener("click", loadFlashFromRepoUnified);
 
 /* ===== Hook tombol supaya tidak menggunakan inline onclick (lebih aman) ===== */
 document.getElementById('btnUploadProduk').addEventListener('click', uploadJSONSimple);
