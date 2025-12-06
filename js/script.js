@@ -218,45 +218,6 @@ function toggleCustomCategory(select) {
   }
 }
 
-// ===== TAMBAH PRODUK DENGAN TOAST =====
-function addProduct() {
-  const n = document.getElementById('name').value.trim();
-  const pr = Number(document.getElementById('price').value || 0);
-
-  let c = document.getElementById('categorySelect').value.trim();
-  if (c === 'custom') {
-    c = document.getElementById('customCategory').value.trim();
-  }
-
-  const im = document.getElementById('imageName').value.trim();
-
-  if (!n || !pr || !c || !im) {
-    alert('⚠️ Semua kolom harus diisi!');
-    return;
-  }
-
-  products.push({
-    id: generateId(),
-    name: n,
-    price: pr,
-    img: 'images/' + sanitizeFileName(im),
-    category: c
-  });
-
-  saveLocal();
-
-  ['name', 'price', 'categorySelect', 'customCategory', 'imageName'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-
-  document.getElementById('customCategory').style.display = 'none';
-  renderTable();
-  document.getElementById('name').focus();
-
-  // ===== NOTIF TOAST =====
-  showToast(`✅ Produk "${n}" berhasil ditambahkan!`);
-}
 
 // ===== FUNSI TOAST =====
 function showToast(message) {
@@ -366,7 +327,7 @@ function downloadJSON() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'produk-warung-emung.json';
+  a.download = 'produk.json';
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 }
