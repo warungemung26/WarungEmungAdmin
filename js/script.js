@@ -1087,3 +1087,130 @@ async function uploadJSONSimple() {
   }
 }
 
+async function pushZipToGitHubSafe() {
+  const token = document.getElementById('githubToken').value.trim();
+  if (!token) return alert("⚠ Masukkan token GitHub!");
+
+  const zipFile = document.getElementById("zipInputSafe").files[0];
+  if (!zipFile) return alert("⚠ Pilih file ZIP dulu!");
+
+  // Load JSZip jika belum
+  if (!window.JSZip) await loadJSZip();
+
+  const zip = await JSZip.loadAsync(zipFile);
+  const fileEntries = Object.keys(zip.files);
+
+  if (fileEntries.length === 0)
+    return alert("❌ ZIP kosong atau format salah!");
+
+  for (let path of fileEntries) {
+    const file = zip.files[path];
+    if (file.dir) continue; // skip folder kosong
+    const content = await file.async("uint8array");
+
+    // Upload ke GitHub
+    try {
+      await uploadFileGitHubSafe(path, content, token);
+    } catch (err) {
+      console.error("Upload gagal:", path, err);
+      alert("❌ Upload gagal untuk file: " + path);
+    }
+  }
+
+  alert("✅ Semua file dari ZIP berhasil di-push (images opsional, file lama tetap utuh)!");
+}
+
+// Load JSZip dari CDN
+function loadJSZip() {
+  return new Promise(resolve => {
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js";
+    s.onload = resolve;
+    document.body.appendChild(s);
+  });
+}
+
+// Upload file ke GitHub (aman, tidak hapus file lama)
+async function uploadFileGitHubSafe(path, contentUint8, token) {
+  const owner = "WarungEmung26"; // sesuaikan
+  const repo  = "WarungEmung";   // sesuaikan
+  const branch = "main";
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+
+  // Cek SHA (update jika file ada, buat baru jika tidak ada)
+  let sha = null;
+  try {
+    const resCheck = await fetch(url, { headers: { Authorization: "token " + token } });
+    if (resCheck.ok) {
+      const data = await resCheck.json();
+      sha = data.sha;
+    }
+  } catch(e) {
+    // Jika file belum ada, sha tetap null → buat baru
+  }
+
+  // Upload / update
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: {
+      "Authorization": "token " + token,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      message: sha ? "Update file: " + path : "Add file: " + path,
+      content: btoa(String.fromCharCode(...contentUint8)),
+      branch,
+      sha: sha || undefined
+    })
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`HTTP ${res.status} — ${text}`);
+  }
+}
+
+document.getElementById('btnBackupRepo').addEventListener('click', async () => {
+  const token = document.getElementById('githubToken')?.value.trim();
+  if (!token) return alert("⚠️ Masukkan GitHub Token dulu!");
+
+  const owner = 'WarungEmung26';
+  const repo = 'WarungEmung';
+  const branch = 'main';
+
+  if (!window.JSZip) await loadJSZip();
+  const zip = new JSZip();
+
+  async function fetchFolder(path = '') {
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`;
+    const res = await fetch(url, { headers: { Authorization: `token ${token}` } });
+    if (!res.ok) throw new Error('Gagal ambil folder: ' + path);
+    const items = await res.json();
+
+    for (const item of items) {
+      if (item.type === 'file') {
+        const fileRes = await fetch(item.url, { headers: { Authorization: `token ${token}` } });
+        const fileData = await fileRes.json();
+        const content = atob(fileData.content.replace(/\n/g, ''));
+        zip.file(item.path, content);
+      } else if (item.type === 'dir') {
+        await fetchFolder(item.path);
+      }
+    }
+  }
+
+  try {
+    await fetchFolder();
+    const blob = await zip.generateAsync({ type: "blob" });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${repo}-backup.zip`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(a.href);
+    alert('✅ Semua file repo berhasil di-download sebagai ZIP!');
+  } catch (err) {
+    alert('❌ Gagal backup repo: ' + err.message);
+  }
+});
