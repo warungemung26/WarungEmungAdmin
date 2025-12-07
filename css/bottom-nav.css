@@ -53,3 +53,9 @@ html, body {
   overflow-y: auto;
   padding-bottom: 120px; /* cukup untuk bottom-nav */
 }
+
+body {
+  padding-bottom: var(--nav-height, 120px);
+}
+
+
