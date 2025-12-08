@@ -315,8 +315,11 @@
     <div class="button-group">
       <button id="btnBackupRepo">💾 Backup Repo ke ZIP</button>
       <button onclick="pushZipToGitHubSafe()">📦 Push ZIP ke GitHub (aman, images opsional)</button>
-    </div>
-    <input type="file" id="zipInputSafe" accept=".zip">
+<input type="file" id="zipInputSafe" accept=".zip">
+<div id="pushStatus" style="margin-top:10px;"></div>
+<progress id="pushProgress" value="0" max="100" style="width:100%; margin-top:5px;"></progress>
+
+
 
     <!-- JSON & Flash Actions -->
     <div class="button-group">
