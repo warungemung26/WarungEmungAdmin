@@ -1087,6 +1087,7 @@ async function uploadJSONSimple() {
   }
 }
 
+//pushZip//
 async function pushZipToGitHubSafe() {
   const token = document.getElementById('githubToken').value.trim();
   if (!token) return alert("⚠ Masukkan token GitHub!");
@@ -1170,6 +1171,60 @@ async function uploadFileGitHubSafe(path, contentUint8, token) {
   }
 }
 
+// Versi baru pushZipToGitHubSafe dengan progress dan indikator file
+async function pushZipToGitHubSafe() {
+  const token = document.getElementById('githubToken').value.trim();
+  if (!token) return alert("⚠ Masukkan token GitHub!");
+
+  const zipFile = document.getElementById("zipInputSafe").files[0];
+  if (!zipFile) return alert("⚠ Pilih file ZIP dulu!");
+
+  if (!window.JSZip) await loadJSZip();
+
+  const zip = await JSZip.loadAsync(zipFile);
+  const fileEntries = Object.keys(zip.files);
+
+  if (fileEntries.length === 0) return alert("❌ ZIP kosong atau format salah!");
+
+  const statusDiv = document.getElementById("pushStatus");
+  const progressBar = document.getElementById("pushProgress");
+  progressBar.value = 0;
+  statusDiv.innerHTML = "<strong>Mulai push file:</strong><br>";
+
+  const filesToPush = fileEntries.filter(f => !zip.files[f].dir);
+  const totalFiles = filesToPush.length;
+  let doneFiles = 0;
+
+  for (let path of filesToPush) {
+    const file = zip.files[path];
+
+    // Tampilkan file yang sedang diproses
+    statusDiv.innerHTML += `📤 ${path} ...<br>`;
+    statusDiv.scrollTop = statusDiv.scrollHeight; // scroll otomatis ke bawah
+
+    const content = await file.async("uint8array");
+
+    try {
+      // Tetap memanggil fungsi push aman asli
+      await uploadFileGitHubSafe(path, content, token);
+      statusDiv.innerHTML += `✅ ${path} berhasil di-push<br>`;
+    } catch (err) {
+      console.error("Upload gagal:", path, err);
+      statusDiv.innerHTML += `❌ ${path} gagal di-push<br>`;
+    }
+
+    doneFiles++;
+    progressBar.value = Math.round((doneFiles / totalFiles) * 100);
+  }
+
+  statusDiv.innerHTML += "<strong>Semua file selesai!</strong>";
+}
+
+// Fungsi uploadFileGitHubSafe dan loadJSZip tetap sama seperti sebelumnya
+// Tidak ada yang dihapus, aman
+
+
+//BackupRepo//
 document.getElementById('btnBackupRepo').addEventListener('click', async () => {
   const token = document.getElementById('githubToken')?.value.trim();
   if (!token) return alert("⚠️ Masukkan GitHub Token dulu!");
