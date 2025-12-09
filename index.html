@@ -284,59 +284,70 @@
 
   <h2>🌐 Kelola Repo GitHub</h2>
 
-  <!-- Upload Gambar Massal -->
-  <div class="card card-upload">
+  <div class="card">
     <h3>📂 Upload Gambar Massal</h3>
     <input type="file" id="filePicker" multiple accept="image/*">
     <button id="uploadMassalBtn">🚀 Upload</button>
-    <div id="previewArea">Preview file akan muncul di sini...</div>
+    <div id="previewArea"></div>
   </div>
 
-  <!-- Kelola Folder Repo -->
-  <div class="card card-folder">
+  <div class="card">
     <h3>🗂️ Kelola Folder Repo</h3>
     <input id="folderPath" placeholder="nama-folder (misal: images)">
-    <div class="button-group">
-      <button id="loadFolder">📂 Load</button>
-      <button id="deleteSelected">🗑️ Hapus Terpilih</button>
-      <button id="deleteAll">🗑️ Hapus Semua</button>
-      <button onclick="buatFolderBaru()">📁 Buat Folder Baru</button>
-    </div>
+    <button id="loadFolder">📂 Load</button>
+    <button id="deleteSelected">🗑️ Hapus Terpilih</button>
+    <button id="deleteAll">🗑️ Hapus Semua</button>
+    <button onclick="buatFolderBaru()">📁 Buat Folder Baru</button>
+
     <div id="fileList">
       <small>Menunggu load folder...</small>
     </div>
   </div>
 
-  <!-- Repo Produk Manager -->
-  <div class="card card-repo">
+
+<!-- =========================
+     REPO MANAGER (UPLOAD)
+========================= -->
+  <div class="card" id="repoManager">
     <h3>🔁 Repo Produk Manager</h3>
+  <!-- ====== PUSH ZIP TO GITHUB ====== -->
+<div class="push-zip-box">
 
-    <!-- Backup & Push ZIP -->
-    <div class="button-group">
-      <button id="btnBackupRepo">💾 Backup Repo ke ZIP</button>
-      <button onclick="pushZipToGitHubSafe()">📦 Push ZIP ke GitHub (aman, images opsional)</button>
-<input type="file" id="zipInputSafe" accept=".zip">
-<div id="pushStatus" style="margin-top:10px;"></div>
-<progress id="pushProgress" value="0" max="100" style="width:100%; margin-top:5px;"></progress>
+  <!-- Token (jika sudah ada di localStorage, bisa kamu sembunyikan) -->
+  <label class="label">GitHub Token</label>
+  <input type="text" id="githubToken" placeholder="Masukkan token GitHub" />
 
+  <!-- Picker ZIP -->
+  <label class="label">Pilih File ZIP</label>
+  <input type="file" id="zipInputSafe" accept=".zip" />
 
+  <!-- Tombol Upload -->
+  <button id="btnPushZip" onclick="pushZipToGitHubSafe()">
+    🚀 Push ZIP ke GitHub
+  </button>
 
-    <!-- JSON & Flash Actions -->
-    <div class="button-group">
-      <button id="btnUploadProduk">📤 Upload Produk JSON</button>
-      <button id="btnUploadFlash">📤 Upload Flash JSON</button>
-      <button id="btnLoadFlash">🔁 Load Flash dari Repo</button>
-      <button onclick="downloadFlashJSON()">⬇ Download JSON Flash</button>
-      <button onclick="downloadJSON()">⬇️ Download JSON</button>
-      <button onclick="exportToExcel()">⬇️ Export Excel</button>
-    </div>
+  <!-- Progress Bar -->
+  <progress id="pushProgress" max="100" value="0"></progress>
 
-    <p style="font-size:12px;color:#666;margin-top:8px;">
-      Pastikan token memiliki repo scope. File akan diupload ke <code>data/produk.json</code> dan <code>data/flash.json</code>.
-    </p>
-  </div>
+  <!-- Status Log -->
+  <div id="pushStatus"></div>
 
 </div>
+     <button id="btnUploadProduk">📤 Upload Produk JSON</button>
+    <button id="btnUploadFlash">📤 Upload Flash JSON</button>
+    <button id="btnLoadFlash">🔁 Load Flash dari Repo</button>
+     <button onclick="downloadFlashJSON()">⬇ Download JSON Flash</button>
+    <button onclick="downloadJSON()">⬇️ Download JSON</button>
+    <button onclick="exportToExcel()">⬇️ Export Excel</button>
+   </div>
+  <p style="font-size:12px;color:#666;margin-top:8px;">
+    Pastikan token memiliki repo scope. File akan diupload ke <code>data/produk.json</code> dan <code>data/flash.json</code>.
+  </p>
+</div>
+
+</div>
+
+
 
 <!-- ============================================================
      TAB 3 — TOKEN
@@ -410,20 +421,6 @@
   <button class="nav-btn" onclick="openConfirmDeleteFlash()">🗑 Hapus Semua Flash</button>
  <button class="nav-btn" onclick="triggerLoadFlash()">📤 Load Dari GitHub</button>
 </div>
-<script>
-function updateNavPadding() {
-  const nav = document.getElementById('bottom-nav-normal');
-  if (!nav) return;
-
-  const navHeight = nav.offsetHeight;
-  document.body.style.setProperty('--nav-height', (navHeight + 20) + 'px');
-}
-
-window.addEventListener('load', updateNavPadding);
-window.addEventListener('resize', updateNavPadding);
-</script>
-
-
 
 <script>
 // ====== TAB SWITCH + NAV SWITCH ======
@@ -809,4 +806,3 @@ document.getElementById('btnLoadFlash').addEventListener('click', loadFlashFromR
 
 </body>
 </html>
-
