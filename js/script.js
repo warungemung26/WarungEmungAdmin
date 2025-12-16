@@ -12,6 +12,16 @@ function generateId() {
   return Date.now().toString(36) + '-' + Math.floor(Math.random() * 1e6).toString(36);
 }
 
+function makeSlug(text) {
+  return String(text || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
+
 function saveLocal() {
   localStorage.setItem('products', JSON.stringify(products));
 }
@@ -21,6 +31,8 @@ function sanitizeFileName(name) {
 }
 
 function escapeText(s) { return String(s == null ? '' : s); }
+
+
 
 // ===== CATEGORY OPTIONS =====
 function renderCategoryOptions() {
@@ -289,30 +301,6 @@ function clearJSONInput() {
 }
 
 // ===== GENERATE JSON + SCROLL + COPY =====
-function generateAndScrollJSON() {
-  if (!products || products.length === 0) {
-    alert('⚠️ Belum ada produk yang bisa digenerate!');
-    return;
-  }
-
-  const formatted = products.map(p => ({
-    name: p.name,
-    price: Number(p.price),
-    img: p.img,
-    category: p.category
-  }));
-
-  const jsonText = JSON.stringify(formatted, null, 2);
-  if (jsonOutput) {
-    jsonOutput.textContent = jsonText;
-    jsonOutput.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  navigator.clipboard.writeText(jsonText)
-    .then(() => alert('✅ JSON berhasil digenerate dan disalin ke clipboard!'))
-    .catch(err => alert('❌ Gagal menyalin JSON: ' + err));
-}
-
 function clearJSONOutput() {
   if (!jsonOutput) return;
   jsonOutput.textContent = '[ Kosong ]';
@@ -322,15 +310,53 @@ function clearJSONOutput() {
 function downloadJSON() {
   if (!jsonOutput) return;
   const output = jsonOutput.textContent;
-  if (!output || output === '[ Kosong ]') { alert('Tidak ada JSON untuk didownload.'); return; }
+  if (!output || output === '[ Kosong ]') {
+    alert('Tidak ada JSON untuk didownload.');
+    return;
+  }
+
   const blob = new Blob([output], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = 'produk.json';
-  document.body.appendChild(a); a.click(); a.remove();
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
   URL.revokeObjectURL(url);
 }
+
+function generateAndScrollJSON() {
+  if (!products || products.length === 0) {
+    alert('⚠️ Belum ada produk yang bisa digenerate!');
+    return;
+  }
+
+  const formatted = products.map(p => ({
+    name: p.name,
+    slug: makeSlug(p.name), // ✅ SLUG AKTIF
+    price: Number(p.price || 0),
+    img: p.img || '',
+    category: p.category || ''
+  }));
+
+  const jsonText = JSON.stringify(formatted, null, 2);
+
+  if (jsonOutput) {
+    jsonOutput.textContent = jsonText;
+    jsonOutput.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // copy otomatis (AMAN)
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(jsonText)
+      .then(() => alert('✅ JSON berhasil digenerate & disalin!'))
+      .catch(() => alert('⚠️ JSON berhasil digenerate (copy manual jika perlu)'));
+  } else {
+    alert('⚠️ JSON berhasil digenerate (browser tidak support auto-copy)');
+  }
+}
+
 
 // ===== EXPORT EXCEL =====
 function exportToExcel() {
@@ -1223,49 +1249,58 @@ async function pushZipToGitHubSafe() {
 // Fungsi uploadFileGitHubSafe dan loadJSZip tetap sama seperti sebelumnya
 // Tidak ada yang dihapus, aman
 
+// ==========================
+// DOWNLOAD REPO ZIP DENGAN TOKEN
+// ==========================
+document.getElementById('btnDownloadRepo')?.addEventListener('click', async () => {
+  const progress = document.getElementById('downloadProgress');
+  const status = document.getElementById('downloadStatus');
 
-//BackupRepo//
-document.getElementById('btnBackupRepo').addEventListener('click', async () => {
-  const token = document.getElementById('githubToken')?.value.trim();
-  if (!token) return alert("⚠️ Masukkan GitHub Token dulu!");
-
-  const owner = 'WarungEmung26';
-  const repo = 'WarungEmung';
-  const branch = 'main';
-
-  if (!window.JSZip) await loadJSZip();
-  const zip = new JSZip();
-
-  async function fetchFolder(path = '') {
-    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`;
-    const res = await fetch(url, { headers: { Authorization: `token ${token}` } });
-    if (!res.ok) throw new Error('Gagal ambil folder: ' + path);
-    const items = await res.json();
-
-    for (const item of items) {
-      if (item.type === 'file') {
-        const fileRes = await fetch(item.url, { headers: { Authorization: `token ${token}` } });
-        const fileData = await fileRes.json();
-        const content = atob(fileData.content.replace(/\n/g, ''));
-        zip.file(item.path, content);
-      } else if (item.type === 'dir') {
-        await fetchFolder(item.path);
-      }
-    }
+  // ambil token dari localStorage (dari tab-token)
+  const token = localStorage.getItem('githubToken');
+  if (!token) {
+    status.innerHTML = '❌ Token GitHub tidak ditemukan di localStorage.';
+    return;
   }
 
+  // URL repo (ganti sesuai repo kamu)
+  const zipUrl = 'https://api.github.com/repos/warungemung26/WarungEmung/repo/zipball/main';
+
+  status.innerHTML = 'Mengunduh repo...';
+  progress.value = 0;
+
   try {
-    await fetchFolder();
-    const blob = await zip.generateAsync({ type: "blob" });
+    const response = await fetch(zipUrl, {
+      headers: { Authorization: `token ${token}` },
+    });
+
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+    const contentLength = response.headers.get('Content-Length');
+    const total = contentLength ? parseInt(contentLength, 10) : 0;
+
+    const reader = response.body.getReader();
+    const chunks = [];
+    let received = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.length;
+      if (total) progress.value = (received / total) * 100;
+    }
+
+    const blob = new Blob(chunks, { type: 'application/zip' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `${repo}-backup.zip`;
-    document.body.appendChild(a);
+    a.download = 'repo.zip';
     a.click();
-    a.remove();
-    URL.revokeObjectURL(a.href);
-    alert('✅ Semua file repo berhasil di-download sebagai ZIP!');
+
+    status.innerHTML = `✅ Download selesai.`;
+    progress.value = 100;
+
   } catch (err) {
-    alert('❌ Gagal backup repo: ' + err.message);
+    status.innerHTML = `❌ Gagal download: ${err.message}`;
   }
 });
