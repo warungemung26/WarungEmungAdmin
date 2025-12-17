@@ -130,7 +130,12 @@ function updateField(id, field, value) {
     const num = Number(value.replace(/[^0-9]/g, ''));
     products[idx].price = num || 0;
   } else {
-    products[idx][field] = value;
+    if (field === 'name') {
+  products[idx].name = value;
+  // 🔒 slug TIDAK DIUBAH
+} else {
+  products[idx][field] = value;
+}
   }
 
   saveLocal();
@@ -202,7 +207,15 @@ function addProduct() {
     showToast(`✅ Produk "${n}" diupdate`);
   } else {
     // tambah produk baru
-    products.push({ id: generateId(), name: n, price: pr, category: c, img: imgPath });
+    products.push({
+  id: generateId(),
+  name: n,
+  slug: makeSlug(n), // 🔒 DIBUAT SEKALI
+  price: pr,
+  category: c,
+  img: imgPath
+});
+
     showToast(`✅ Produk "${n}" ditambahkan`);
   }
 
@@ -280,7 +293,14 @@ function importJSON() {
         products[idx] = { id: products[idx].id, name, price, category, img };
       } else {
         // tambah produk baru
-        products.push({ id: generateId(), name, price, category, img });
+        products.push({
+  id: generateId(),
+  name,
+  slug: makeSlug(name), // fallback utk JSON lama
+  price,
+  category,
+  img
+});
       }
     });
 
@@ -333,12 +353,12 @@ function generateAndScrollJSON() {
   }
 
   const formatted = products.map(p => ({
-    name: p.name,
-    slug: makeSlug(p.name), // ✅ SLUG AKTIF
-    price: Number(p.price || 0),
-    img: p.img || '',
-    category: p.category || ''
-  }));
+  name: p.name,
+  slug: p.slug || makeSlug(p.name),   // ✅ SLUG DI SINI
+  price: Number(p.price || 0),
+  img: p.img || '',
+  category: p.category || ''
+}));
 
   const jsonText = JSON.stringify(formatted, null, 2);
 
@@ -472,59 +492,87 @@ function fallbackCopy(text) {
   document.body.removeChild(ta);
 }
 
-// ===== UPLOAD KE GITHUB =====
+// ===== UPLOAD KE GITHUB (PASTI ADA SLUG) =====
 async function uploadToGitHub() {
-  if (!jsonOutput) return alert('Tidak ada JSON untuk diupload!');
+  if (!jsonOutput || !jsonOutput.textContent)
+    return alert('⚠️ Tidak ada JSON untuk diupload!');
+
   const token = document.getElementById('githubToken').value.trim();
   if (!token) return alert('⚠️ Masukkan GitHub Token Anda!');
 
   const content = jsonOutput.textContent;
-  if (!content || content === '[ Kosong ]') return alert('⚠️ JSON kosong, tidak bisa diupload.');
+
+  // 🔒 WAJIB: pastikan JSON tidak kosong
+  if (!content || content === '[ Kosong ]')
+    return alert('⚠️ JSON kosong, tidak bisa diupload.');
+
+  // 🔒 WAJIB: pastikan slug ADA
+  if (!content.includes('"slug"')) {
+    return alert('⚠️ JSON belum mengandung slug.\nKlik "Generate JSON" terlebih dahulu!');
+  }
 
   const btn = uploadBtn;
   const originalText = btn.textContent;
   btn.disabled = true;
   btn.textContent = '⏳ Mengunggah...';
 
-  const owner = 'WarungEmung26';
-const repo = 'WarungEmung';
-  const path = 'data/produk.json';
+  const owner  = 'WarungEmung26';
+  const repo   = 'WarungEmung';
+  const path   = 'data/produk.json';
   const branch = 'main';
 
   try {
     let sha = null;
+
+    // cek apakah file sudah ada
     try {
-      const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`, {
-        headers: { Authorization: 'token ' + token, Accept: 'application/vnd.github+json' }
-      });
+      const res = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`,
+        {
+          headers: {
+            Authorization: 'token ' + token,
+            Accept: 'application/vnd.github+json'
+          }
+        }
+      );
       if (res.ok) {
         const data = await res.json();
         sha = data.sha;
       }
-    } catch(e) { console.warn('File belum ada, akan dibuat baru.'); }
+    } catch (e) {
+      console.warn('File belum ada, akan dibuat baru.');
+    }
 
-    const resUpload = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-      method: 'PUT',
-      headers: { 
-        Authorization: 'token ' + token,
-        Accept: 'application/vnd.github+json'
-      },
-      body: JSON.stringify({
-        message: sha ? 'Update produk JSON' : 'Add produk JSON',
-        content: btoa(unescape(encodeURIComponent(content))),
-        branch: branch,
-        sha: sha || undefined
-      })
-    });
+    // upload file (PASTI dari jsonOutput)
+    const resUpload = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: 'token ' + token,
+          Accept: 'application/vnd.github+json'
+        },
+        body: JSON.stringify({
+          message: sha ? 'Update produk JSON' : 'Add produk JSON',
+          content: btoa(unescape(encodeURIComponent(content))),
+          branch,
+          sha: sha || undefined
+        })
+      }
+    );
 
     if (!resUpload.ok) throw new Error('HTTP ' + resUpload.status);
+
     btn.textContent = '✅ Berhasil!';
-    setTimeout(() => btn.textContent = originalText, 2000);
-    alert('🎉 JSON berhasil diupload ke GitHub!');
+    setTimeout(() => (btn.textContent = originalText), 2000);
+
+    // ✅ ALERT SUKSES
+    alert('✅ JSON produk (dengan slug) berhasil diupload ke GitHub!');
+
   } catch (err) {
     console.error(err);
     btn.textContent = '❌ Gagal Upload';
-    setTimeout(() => btn.textContent = originalText, 2000);
+    setTimeout(() => (btn.textContent = originalText), 2000);
     alert('❌ Upload gagal: ' + err.message);
   } finally {
     btn.disabled = false;
@@ -1028,7 +1076,12 @@ function onCellBlur(ev) {
     value = Number(value.replace(/[^0-9]/g, "")) || 0;
   }
 
+  if (field === 'name') {
+  products[idx].name = value;
+  // 🔒 slug TIDAK DIUBAH
+} else {
   products[idx][field] = value;
+}
 
   saveLocal();
   renderTable();
@@ -1063,50 +1116,57 @@ document.getElementById('uploadTableJsonBtn').addEventListener('click', () => {
 
 // ===== UPLOAD JSON SEDERHANA =====
 async function uploadJSONSimple() {
-  if (!products || products.length === 0) return alert('⚠️ Belum ada produk untuk diupload!');
-
-  const token = document.getElementById('githubToken').value.trim();
-  if (!token) return alert('⚠️ Masukkan GitHub Token Anda!');
-
-  const content = JSON.stringify(products.map(p => ({
-    name: p.name,
-    price: Number(p.price),
-    img: p.img,
-    category: p.category
-  })), null, 2);
-
-  const owner = 'WarungEmung26'; // ganti sesuai akun GitHub
-  const repo  = 'WarungEmung';   // ganti sesuai repo
-  const path  = 'data/produk.json';
-  const branch = 'main';
-
   try {
-    // cek SHA file kalau sudah ada
+    if (!jsonOutput || !jsonOutput.textContent || jsonOutput.textContent === '[ Kosong ]') {
+      return alert('⚠️ Generate JSON dulu sebelum upload!');
+    }
+
+    // 🔒 pastikan slug benar-benar ada
+    if (!jsonOutput.textContent.includes('"slug"')) {
+      return alert('⚠️ JSON belum mengandung slug. Generate ulang!');
+    }
+
+    const token = document.getElementById('githubToken').value.trim();
+    if (!token) return alert('⚠️ Masukkan GitHub Token!');
+
+    const content = jsonOutput.textContent; // ✅ SAMA DENGAN DOWNLOAD
+
+    const owner = 'WarungEmung26';
+    const repo  = 'WarungEmung';
+    const path  = 'data/produk.json';
+    const branch = 'main';
+
     let sha = null;
+
+    // cek apakah file sudah ada
     try {
-      const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`, {
-        headers: { Authorization: 'token ' + token }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        sha = data.sha;
-      }
-    } catch(e) { /* file belum ada, akan dibuat baru */ }
+      const res = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`,
+        { headers: { Authorization: 'token ' + token } }
+      );
+      if (res.ok) sha = (await res.json()).sha;
+    } catch (_) {}
 
     // upload / update
-    const resUpload = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-      method: 'PUT',
-      headers: { Authorization: 'token ' + token },
-      body: JSON.stringify({
-        message: sha ? 'Update produk JSON' : 'Add produk JSON',
-        content: btoa(unescape(encodeURIComponent(content))),
-        branch,
-        sha: sha || undefined
-      })
-    });
+    const resUpload = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+      {
+        method: 'PUT',
+        headers: { Authorization: 'token ' + token },
+        body: JSON.stringify({
+          message: sha ? 'Update produk JSON' : 'Add produk JSON',
+          content: btoa(unescape(encodeURIComponent(content))),
+          branch,
+          sha: sha || undefined
+        })
+      }
+    );
 
-    if (!resUpload.ok) throw new Error('HTTP ' + resUpload.status);
-    alert('✅ JSON berhasil diupload ke GitHub!');
+    if (!resUpload.ok) {
+      throw new Error('HTTP ' + resUpload.status);
+    }
+
+    alert('✅ JSON (PERSIS hasil generate & download) berhasil diupload!');
   } catch (err) {
     console.error(err);
     alert('❌ Upload gagal: ' + err.message);
