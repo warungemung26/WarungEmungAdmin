@@ -67,17 +67,26 @@ pre{
 </style>
 </head>
 <body>
+	
+	<button onclick="history.back()" style="
+  margin-bottom:15px;
+  padding:8px 14px;
+  border-radius:6px;
+  border:1px solid #ccc;
+  background:#f5f5f5;
+  cursor:pointer;">
+  ⬅ Kembali
+</button>
+
 
 <div class="container">
   <h2>🚀 GitHub Repo Manager</h2>
 
   <!-- ================= TOKEN MANAGER ================= -->
   <div id="tab-token" class="tab-content">
-
     <h3>🔐 GitHub Token Manager</h3>
 
     <div class="card">
-
       <label for="githubToken">Token GitHub</label>
       <input
         id="githubToken"
@@ -107,7 +116,6 @@ pre{
       <div class="btn-row">
         <button id="btnClearStored" type="button" class="btn-danger">🗑 Hapus Token</button>
       </div>
-
     </div>
   </div>
   <!-- ================= END TOKEN MANAGER ================= -->
@@ -117,35 +125,45 @@ pre{
   <input id="repo" placeholder="Repository Name">
   <input id="branch" value="main" placeholder="Branch">
 
-  <!-- ================= BOOKMARK ACTION ================= -->
+  <!-- ================= BOOKMARK ================= -->
   <div class="btn-row">
     <button class="btn-sec" onclick="saveBookmark()">🔖 Simpan Bookmark</button>
     <button class="btn-sec" onclick="deleteBookmark()">🗑️ Hapus Bookmark</button>
   </div>
 
-  <!-- ================= BOOKMARK LIST (INI YANG KEMARIN BELUM ADA) ================= -->
   <select id="bookmark" onchange="loadBookmark()">
     <option value="">📂 Pilih Bookmark Tersimpan</option>
   </select>
 
-</div>
+  <!-- ================= ACTION (SEMUA TETAP ADA) ================= -->
+  <div class="btn-row">
+    <button class="btn-sec" onclick="loadRepo()">📂 Load Repo</button>
+    <button class="btn-sec" onclick="downloadSelected()">⬇️ Download</button>
+    <button class="btn-danger" onclick="deleteSelected()">🗑️ Delete</button>
+    <!-- ================= ZIP UPLOAD ================= -->
+<label>📦 File ZIP untuk Push</label>
+<input
+  type="file"
+  id="zip"
+  accept=".zip"
+/>
 
-</div>
-
+    <button class="btn-main" onclick="pushZip()">📦 Push ZIP</button>
   </div>
+
+<div id="progressWrap" style="display:none;margin-top:10px">
+  <div style="height:8px;background:#eee;border-radius:4px;overflow:hidden">
+    <div id="progressBar" style="height:100%;width:0%;background:#4caf50"></div>
+  </div>
+  <small id="progressText">Idle</small>
+</div>
+
+  <!-- ================= OUTPUT ================= -->
+  <div id="repoList" class="repo-list"></div>
+  <pre id="log"></pre>
 </div>
 
 
-<!-- ACTION -->
-<div class="btn-row">
-  <button class="btn-sec" onclick="loadRepo()">📂 Load Repo</button>
-  <button class="btn-sec" onclick="downloadSelected()">⬇️ Download</button>
-  <button class="btn-danger" onclick="deleteSelected()">🗑️ Delete</button>
-</div>
-
-<div id="repoList" class="repo-list"></div>
-<pre id="log"></pre>
-</div>
 
 <script>
 /* ========= UTIL ========= */
@@ -347,13 +365,16 @@ async function deletePath(path){
   log("🗑️ " + path)
 }
 
-/* ========= PUSH ZIP + PROGRESS ========= */
+/* ========= PUSH ZIP + PROGRESS (FIX LOADING LAMA) ========= */
+const yieldUI = () => new Promise(r => setTimeout(r, 0))
+
 async function pushZip(){
   const file = document.getElementById("zip").files[0]
   if(!file) return alert("Pilih file ZIP")
 
   log("📦 Membaca ZIP...")
-  setProgress(0, "Membaca ZIP")
+  setProgress(1, "Membaca ZIP")
+  await yieldUI()
 
   const zip = await JSZip.loadAsync(file)
   const files = Object.values(zip.files).filter(f => !f.dir)
@@ -361,12 +382,23 @@ async function pushZip(){
   let done = 0
 
   for(const f of files){
+    await yieldUI()
+
+    setProgress(
+      Math.round((done / total) * 100),
+      `📄 ${f.name}`
+    )
+
     const content = await f.async("string")
     await pushFile(f.name, content)
-    done++
 
-    const pct = Math.round(done / total * 100)
-    setProgress(pct, `⬆️ Upload ${done}/${total}`)
+    done++
+    setProgress(
+      Math.round((done / total) * 100),
+      `⬆️ Upload ${done}/${total}`
+    )
+
+    log("⬆️ " + f.name)
   }
 
   setProgress(100, "✅ Push ZIP selesai")
@@ -381,9 +413,12 @@ async function pushFile(path, content){
   const check = await fetch(api + `?ref=${branch.value}`, {
     headers: ghHeaders()
   })
-  if(check.ok) sha = (await check.json()).sha
 
-  await fetch(api, {
+  if(check.ok){
+    sha = (await check.json()).sha
+  }
+
+  const res = await fetch(api, {
     method: "PUT",
     headers: ghHeaders(),
     body: JSON.stringify({
@@ -393,8 +428,12 @@ async function pushFile(path, content){
       ...(sha && { sha })
     })
   })
+
+  if(!res.ok) throw await res.text()
 }
 </script>
+
+
 
 <script>
 /* ================= TOKEN MANAGER (SECURE) ================= */
