@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title></title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/bottom-nav.css">
+<link rel="stylesheet" href="css/flash.css">
+
+
+
+<style>
+/* ====== STYLE TAB (STICKY) ====== */
+.tabs {
+  position: sticky;
+  top: 0;
+  z-index: 999;
+  display: flex;
+  border-bottom: 2px solid #ddd;
+  margin-bottom: 15px;
+  background: #fff;
+  padding-top: 8px;
+}
+
+.tab {
+  padding: 10px 16px;
+  cursor: pointer;
+  border: 1px solid #ddd;
+  border-bottom: none;
+  background: #f7f7f7;
+  margin-right: 5px;
+  border-radius: 6px 6px 0 0;
+  font-weight: bold;
+}
+.tab.active { 
+  background: #fff; 
+  border-bottom: 2px solid white; 
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* Card wrapper */
+.card {
+  background: #fff;
+  border: 1px solid #ccc;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 18px;
+}
+
+/* ======= MODAL ======= */
+#confirmModal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,.55);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+#confirmBox {
+  background: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 350px;
+  text-align: center;
+}
+#confirmBox button {
+  padding: 10px 16px;
+  margin: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<h1></h1>
+
+<!-- =============== MENU TAB =============== -->
+<div class="tabs">	
+<div class="tab active" data-tab="offline">📦 Produk Biasa</div>
+<div class="tab" data-tab="flash">⚡ Flash Sale</div>
+<div class="tab" data-tab="repo">🌐 Repo Manager</div>
+<div class="tab" data-tab="token">🔐 Token</div>
+</div>
+
+<!-- ============================================================
+     TAB 1 — DATA OFFLINE
+============================================================ -->
+<div id="tab-offline" class="tab-content active">
+
+  <h2>📦 Kelola Data Offline</h2>
+
+<!-- FORM TAMBAH -->
+<div class="card">
+  <h3>🛍️ Tambah Produk Baru</h3>
+  <div class="admin-form">
+    <input type="text" id="name" placeholder="Nama Produk"
+           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <input type="number" id="price" placeholder="Harga (Rp)"
+           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+
+    <label>Kategori:</label>
+    <select id="categorySelect" onchange="toggleCustomCategory(this)">
+      <option value="">Pilih Kategori</option>
+      <option value="sembako">Sembako</option>
+      <option value="makanan">Makanan Cepat Saji</option>
+      <option value="mie">Mie Instan</option>
+      <option value="snack">Snack</option>
+      <option value="minuman">Minuman</option>
+      <option value="minumansachet">Obat</option>
+      <option value="rumah">Rumah</option>
+      <option value="custom">Custom...</option>
+    </select>
+    <input type="text" id="customCategory" placeholder="Tulis kategori baru..." style="display:none;"
+           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+
+    <label>Gambar Produk:</label>
+    <div style="display:flex; gap:10px;">
+      <input type="text" id="imageName" placeholder="nama-file-gambar"
+             autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <button onclick="triggerFilePickerTemp()">📁 Pilih</button>
+    </div>
+
+    <button class="btn-add" onclick="addProduct()">+ Tambah Produk</button>
+  </div>
+</div>
+
+
+  <!-- IMPORT JSON -->
+  <div class="card">
+    <h3>📥 Import JSON ke Tabel</h3>
+    <textarea id="jsonInput" placeholder='Tempelkan array JSON di sini...' style="width:100%;height:120px;"></textarea>
+    <button onclick="importJSON()">📤 Import</button>
+    <button onclick="clearJSONInput()">🧹 Bersihkan</button>
+  </div>
+
+  <!-- FILTER / SORT -->
+  <div class="card">
+    <h3>🔍 Filter & Sort Produk</h3>
+    <select id="filterCategory" onchange="applyFilter()">
+      <option value="">Semua Kategori</option>
+    </select>
+
+    <select id="sortOption" onchange="applyFilter()">
+      <option value="">Tidak Diurutkan</option>
+      <option value="nameAsc">Nama (A–Z)</option>
+      <option value="nameDesc">Nama (Z–A)</option>
+      <option value="priceLow">Harga Termurah</option>
+      <option value="priceHigh">Harga Termahal</option>
+    </select>
+
+    <input id="searchInput" placeholder="Cari..." oninput="applyFilter()">
+    <button onclick="resetFilter()">🔄 Reset</button>
+  </div>
+
+<!-- ============================================================
+     TABEL PRODUK OFFLINE
+============================================================ -->
+
+<!-- BARIS ATAS: IMPORT PRODUK LOKAL + HAPUS SEMUA -->
+<div style="display:flex; gap:10px; margin-bottom:10px;">
+
+    <!-- TOMBOL IMPORT TANPA LINK -->
+    <button class="btn" onclick="loadProdukFromRepo()">📥 Import Produk</button>
+
+    <!-- ★★★ TOMBOL HAPUS SEMUA PRODUK ★★★ -->
+    <button class="btn" style="background:#ff3b30; color:white;" onclick="openConfirmDeleteAll()">🗑 Hapus Semua</button>
+</div>
+
+
+<div class="card">
+  <h3>📋 Data Produk (Offline)</h3>
+
+  <div class="table-wrap">
+    <table id="productTable">
+      <thead>
+        <tr>
+          <th>No</th>
+          <th>Nama Produk</th>
+          <th>Harga</th>
+          <th>Kategori</th>
+          <th>Gambar</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+  <!-- OUTPUT JSON -->
+  <div class="card">
+    <button onclick="generateAndScrollJSON()">💾 Generate JSON</button>
+    <button onclick="copyJSON()">📋 Copy</button>
+    <button onclick="window.open('tools/ai-product-generator.html','_blank')">
+  🤖 AI Product Generator
+</button>
+    <pre id="jsonOutput">[ Kosong ]</pre>
+  </div>
+</div>
+
+<!-- ============================================================
+     TAB FLASH SALE
+============================================================ -->
+<div id="tab-flash" class="tab-content">
+  <h2>⚡ Kelola Flash Sale</h2>
+
+  <!-- IMPORT BOX -->
+  <div class="flash-import-box">
+    <h3>📥 Import JSON Flash</h3>
+
+    <!-- Import via FILE -->
+    <input type="file" id="flashFileInput" accept="application/json">
+    <button onclick="importFlashFromFile()">📁 Import dari File</button>
+
+    <!-- Import via TEXT -->
+    <textarea id="flashJsonText" placeholder="Paste JSON flash sale di sini..."></textarea>
+    <button onclick="importFlashFromText()">📥 Import dari Kode</button>
+    <button onclick="clearFlashJson()">🧹 Bersihkan Kode</button>
+  </div>
+
+  <!-- INPUT FLASH -->
+  <div class="card">
+    <h3>⚡ Flash Sale</h3>
+    <div class="admin-form">
+      <input type="text" id="flash_name" placeholder="Nama Produk">
+      <input type="number" id="flash_price_normal" placeholder="Harga Normal">
+      <input type="number" id="flash_price_flash" placeholder="Harga Flash">
+      <input type="number" id="flash_stock" placeholder="Stok">
+      <input type="text" id="flash_img" placeholder="URL Gambar">
+      <input type="text" id="flash_label" placeholder="Deskripsi">
+      <input type="datetime-local" id="flash_until">
+      <button onclick="addFlashProduct()">➕ Tambah Flash Sale</button>
+    </div>
+  </div>
+
+
+<!-- TABEL FLASH -->
+<button onclick="loadFlashFromRepo()">🔄 Sync Flash Sale dari Repo</button>
+<div class="table-wrap">
+  <table id="flashTable">
+    <thead>
+      <tr>
+        <th>No</th>
+        <th>Nama</th>
+        <th>Harga Normal</th>
+        <th>Harga Flash</th>
+        <th>Stok</th>
+        <th>Gambar</th>
+        <th>Label</th>
+        <th>Flash Sampai</th>
+        <th>Aksi</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<!-- ============================================================
+     OUTPUT JSON FLASH
+============================================================ -->
+<div class="card" id="flash_json_section">
+  <h3>📤 JSON Flash</h3>
+
+  <button onclick="generateAndScrollFlashJSON()">💾 Generate JSON Flash</button>
+  <button onclick="copyFlashJSON()">📋 Copy</button>
+
+  <pre id="flashJsonOutput">[ Kosong ]</pre>
+</div>
+
+  <!-- EXPORT -->
+  <div style="margin-top:10px;">
+    <button onclick="downloadFlashJSON()">📤 Download JSON Flash</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     TAB 2 — REPO MANAGER
+============================================================ -->
+<div id="tab-repo" class="tab-content">
+
+  <h2>🌐 Kelola Repo GitHub</h2>
+
+  <div class="card">
+    <h3>📂 Upload Gambar Massal</h3>
+    <input type="file" id="filePicker" multiple accept="image/*">
+    <button id="uploadMassalBtn">🚀 Upload</button>
+    <div id="previewArea"></div>
+  </div>
+
+  <div class="card">
+    <h3>🗂️ Kelola Folder Repo</h3>
+    <input id="folderPath" placeholder="nama-folder (misal: images)">
+    <button id="loadFolder">📂 Load</button>
+    <button id="deleteSelected">🗑️ Hapus Terpilih</button>
+    <button id="deleteAll">🗑️ Hapus Semua</button>
+    <button onclick="buatFolderBaru()">📁 Buat Folder Baru</button>
+
+    <div id="fileList">
+      <small>Menunggu load folder...</small>
+    </div>
+  </div>
+
+
+<!-- =========================
+     REPO MANAGER (UPLOAD)
+========================= -->
+  <div class="card" id="repoManager">
+    <h3>🔁 Repo Produk Manager</h3>
+  <!-- ====== PUSH ZIP TO GITHUB ====== -->
+<div class="push-zip-box">
+
+  <!-- Token (jika sudah ada di localStorage, bisa kamu sembunyikan) -->
+  <label class="label">GitHub Token</label>
+  <input type="text" id="githubToken" placeholder="Masukkan token GitHub" />
+
+  <!-- Picker ZIP -->
+  <label class="label">Pilih File ZIP</label>
+  <input type="file" id="zipInputSafe" accept=".zip" />
+
+  <!-- Tombol Upload -->
+  <button id="btnPushZip" onclick="pushZipToGitHubSafe()">
+    🚀 Push ZIP ke GitHub
+  </button>
+
+  <!-- Progress Bar -->
+  <progress id="pushProgress" max="100" value="0"></progress>
+
+  <!-- Status Log -->
+  <div id="pushStatus"></div>
+
+</div>
+     <button id="btnUploadProduk">📤 Upload Produk JSON</button>
+    <button id="btnUploadFlash">📤 Upload Flash JSON</button>
+    <button id="btnLoadFlash">🔁 Load Flash dari Repo</button>
+     <button onclick="downloadFlashJSON()">⬇ Download JSON Flash</button>
+    <button onclick="downloadJSON()">⬇️ Download JSON</button>
+    <button onclick="exportToExcel()">⬇️ Export Excel</button>
+   </div>
+  <p style="font-size:12px;color:#666;margin-top:8px;">
+    Pastikan token memiliki repo scope. File akan diupload ke <code>data/produk.json</code> dan <code>data/flash.json</code>.
+  </p>
+</div>
+
+</div>
+
+
+
+<!-- ============================================================
+     TAB 3 — TOKEN
+============================================================ -->
+<div id="tab-token" class="tab-content">
+
+  <h2>🔐 GitHub Token Manager</h2>
+
+  <div class="card">
+    <label>Token GitHub:</label>
+    <input id="githubToken" type="password" placeholder="Masukkan token">
+
+    <button id="btnPaste">📋 Paste</button>
+    <button id="btnUseStored">🔑 Pakai Token Tersimpan</button>
+    <button id="btnSave">💾 Simpan (Encrypted)</button>
+    <button id="btnSavePlain">💾 Simpan (Plain)</button>
+    <button id="btnClearStored" style="color:red;">🗑 Hapus Token</button>
+
+    <input id="passphrase" type="password" placeholder="Passphrase optional">
+  </div>
+
+</div>
+
+<!-- ============= MODAL KONFIRMASI ============= -->
+<div id="confirmModal">
+  <div id="confirmBox">
+  	
+    <h3>⚠ Hapus Semua Produk?</h3>
+    <p>Semua data produk offline akan dihapus permanen.</p>
+
+    <button style="background:#ff3b30; color:white;" onclick="deleteAllProducts()">Ya, hapus semua</button>
+    <button onclick="closeConfirmDeleteAll()">Batal</button>
+  </div>
+</div>
+
+<!-- Modal Konfirmasi Hapus Semua -->
+<div id="modalConfirm" class="modal" style="display:none;">
+  <div class="modal-content">
+    <p id="modalMessage">Apakah yakin ingin menghapus semua item?</p>
+    <div class="modal-actions">
+      <button id="modalCancel">Batal</button>
+      <button id="modalConfirmBtn">Hapus</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
+
+  <!-- ================== JAVASCRIPT ================== -->
+  <!-- Core / data -->
+<script src="js/script.js"></script>
+<script src="js/flash.js"></script>
+<script src="js/bottom-nav.js"></script>
+
+<!-- ================== NAVIGASI================== -->
+<!-- Bottom nav default (produk biasa) -->
+<div id="bottom-nav-normal" class="bottom-nav">
+  <button class="nav-btn" onclick="scrollToProductInput()">📝 Input Produk</button>
+  <button class="nav-btn" onclick="generateAndScrollJSON()">💾 Generate JSON</button>
+  <button class="nav-btn" onclick="openConfirmDeleteAll()">🗑 Hapus Semua</button>
+  <button class="nav-btn" onclick="scrollToJSON()">📤 Import JSON Lokal</button>
+  <button class="nav-btn github" onclick="loadProdukFromRepo()">🌐 Import dari GitHub</button>
+</div>
+
+<!-- Bottom nav khusus Flash Sale (hidden default) -->
+<div id="bottom-nav-flash" class="bottom-nav" style="display:none;">
+  <button class="nav-btn" onclick="scrollToFlashInput()">📝 Input Flash</button>
+  <button class="nav-btn" onclick="generateAndScrollFlashJSON()">💾 Generate JSON Flash</button>
+  <button class="nav-btn" onclick="openConfirmDeleteFlash()">🗑 Hapus Semua Flash</button>
+ <button class="nav-btn" onclick="triggerLoadFlash()">📤 Load Dari GitHub</button>
+</div>
+
+<script>
+// ====== TAB SWITCH + NAV SWITCH ======
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+
+    // reset active
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+
+    // aktifkan tab
+    tab.classList.add("active");
+    document.getElementById("tab-" + tab.dataset.tab).classList.add("active");
+
+    // ====== SWITCH BOTTOM NAV ======
+    const navNormal = document.getElementById("bottom-nav-normal");
+    const navFlash  = document.getElementById("bottom-nav-flash");
+
+    if (tab.dataset.tab === "offline") {
+      navNormal.style.display = "flex";
+      navFlash.style.display = "none";
+    }
+    else if (tab.dataset.tab === "flash") {
+      navNormal.style.display = "none";
+      navFlash.style.display = "flex";
+    }
+    else {
+      // repo / token → semua nav hilang
+      navNormal.style.display = "none";
+      navFlash.style.display = "none";
+    }
+  });
+});
+
+
+/* ============================================================
+   MODAL HAPUS SEMUA PRODUK
+============================================================ */
+
+// buka modal
+function openConfirmDeleteAll() {
+  document.getElementById("confirmModal").style.display = "flex";
+}
+
+// tutup modal
+function closeConfirmDeleteAll() {
+  document.getElementById("confirmModal").style.display = "none";
+}
+
+// Hapus semua produk
+function deleteAllProducts() {
+  if (typeof products === "undefined") {
+    alert("ERROR: Array 'products' tidak ditemukan!");
+    return;
+  }
+
+  products.length = 0; // kosongkan array
+  if (typeof renderTable === "function") renderTable();
+  if (typeof generateJSON === "function") generateJSON();
+
+  closeConfirmDeleteAll();
+  showToast("Semua produk berhasil dihapus!");
+}
+
+</script>
+
+
+<script>
+// ==============================================
+//  CONFIG REPO (UBAH JIKA PERLU)
+// ==============================================
+const owner  = "WarungEmung26";
+const repo   = "WarungEmung";
+const branch = "main";
+const filePath = "data/produk.json"; // lokasi tetap
+
+
+// ==============================================
+//  IMPORT PRODUK DARI REPO (PAKAI TOKEN)
+// ==============================================
+async function importFromRepo() {
+  const token = document.getElementById("githubToken") 
+                ? document.getElementById("githubToken").value.trim()
+                : "";
+
+  if (!token) {
+    alert("⚠️ Masukkan GitHub Token dulu!");
+    return;
+  }
+
+  try {
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}?ref=${branch}`;
+
+    const res = await fetch(url, {
+      headers: {
+        "Authorization": `token ${token}`,
+        "Accept": "application/vnd.github+json"
+      }
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Gagal ambil file (HTTP ${res.status}) → ${errText}`);
+    }
+
+    const meta = await res.json();
+
+    if (!meta.content) throw new Error("File tidak memiliki konten.");
+
+    // decode base64
+    const decoded = atob(meta.content.replace(/\n/g, ""));
+    let jsonData;
+
+    try {
+      jsonData = JSON.parse(decoded);
+    } catch (e) {
+      throw new Error("Isi produk.json bukan JSON valid: " + e.message);
+    }
+
+    if (!Array.isArray(jsonData)) {
+      throw new Error("Format produk.json harus ARRAY.");
+    }
+
+    // map ke format internal
+    products = jsonData.map(p => ({
+      id: p.id || crypto.randomUUID(),
+      name: p.name || "",
+      price: Number(p.price || 0),
+      category: p.category || "",
+      img: p.img || p.image || ""
+    }));
+
+    saveLocal();
+    renderTable();
+
+    alert("✅ Produk berhasil diimport dari GitHub!");
+  } catch (err) {
+    console.error("ERROR:", err);
+    alert("❌ Error import: " + err.message);
+  }
+}
+
+
+// ==============================================
+//  MODAL KONFIRMASI HAPUS SEMUA PRODUK
+// ==============================================
+function openConfirmDeleteAll() {
+  if (confirm("⚠️ Yakin hapus SEMUA produk?")) {
+    products = [];
+    saveLocal();
+    renderTable();
+    alert("🗑 Semua produk berhasil dihapus.");
+  }
+}
+
+
+// ==============================================
+//  FUNGSI WAJIB ADA (JIKA BELUM)
+// ==============================================
+function saveLocal() {
+  localStorage.setItem("products", JSON.stringify(products));
+}
+
+function renderTable() {
+  const tbody = document.querySelector("#productTable tbody");
+  tbody.innerHTML = "";
+
+  products.forEach((p, i) => {
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>${i + 1}</td>
+      <td>${p.name}</td>
+      <td>${p.price}</td>
+      <td>${p.category}</td>
+      <td><img src="${p.img}" width="40"></td>
+      <td><button onclick="deleteProduct('${p.id}')">Hapus</button></td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+}
+
+function deleteProduct(id) {
+  products = products.filter(p => p.id !== id);
+  saveLocal();
+  renderTable();
+}
+</script>
+
+
+
+<!-- Place script at end of body -->
+<script>
+/* ===========================
+   PASTIKAN DATA ADA
+===========================*/
+if (typeof products === 'undefined') window.products = window.products || [];
+if (typeof flashProducts === 'undefined') window.flashProducts = window.flashProducts || [];
+
+/* ===== HELPER: BUAT SLUG ===== */
+function makeSlug(text = '') {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '') // hapus simbol
+    .replace(/\s+/g, '-')         // spasi → -
+    .replace(/-+/g, '-');         // -- → -
+}
+
+/* ===== UPLOAD JSON SEDERHANA (PRODUK) — DENGAN SLUG ===== */
+async function uploadJSONSimple() {
+  try {
+    if (!products || products.length === 0) {
+      return alert('⚠️ Belum ada produk untuk diupload!');
+    }
+
+    const token = document.getElementById('githubToken').value.trim();
+    if (!token) return alert('⚠️ Masukkan GitHub Token Anda!');
+
+    // 🔒 PAKSA SETIAP PRODUK PUNYA SLUG
+    const normalized = products.map(p => {
+      const name = p.name || '';
+      const slug = p.slug && p.slug.trim()
+        ? p.slug
+        : makeSlug(name);
+
+      return {
+        name,
+        slug, // ✅ SLUG MASUK
+        price: Number(p.price || p.price_normal || 0),
+        img: p.img || '',
+        category: p.category || ''
+      };
+    });
+
+    // 🔒 VALIDASI TERAKHIR
+    if (!normalized.every(p => p.slug)) {
+      return alert('❌ Gagal membuat slug. Pastikan semua produk punya nama.');
+    }
+
+    const content = JSON.stringify(normalized, null, 2);
+
+    const owner  = 'WarungEmung26';
+    const repo   = 'WarungEmung';
+    const path   = 'data/produk.json';
+    const branch = 'main';
+
+    // cek SHA file lama
+    let sha = null;
+    try {
+      const res = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`,
+        { headers: { Authorization: 'token ' + token } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        sha = data.sha;
+      }
+    } catch(e) {}
+
+    // upload / update
+    const resUpload = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+      {
+        method: 'PUT',
+        headers: { Authorization: 'token ' + token },
+        body: JSON.stringify({
+          message: sha ? 'Update produk JSON' : 'Add produk JSON',
+          content: btoa(unescape(encodeURIComponent(content))),
+          branch,
+          sha: sha || undefined
+        })
+      }
+    );
+
+    if (!resUpload.ok) {
+      const errBody = await resUpload.text();
+      throw new Error('HTTP ' + resUpload.status + ' — ' + errBody);
+    }
+
+    alert('✅ JSON produk (dengan slug) berhasil diupload ke GitHub!');
+
+  } catch (err) {
+    console.error('uploadJSONSimple error:', err);
+    alert('❌ Upload gagal: ' + (err.message || err));
+  }
+}
+
+
+/* ===== UPLOAD FLASH.JSON SEDERHANA ===== */
+async function uploadFlashJSONSimple() {
+  try {
+    if (!flashProducts || flashProducts.length === 0) return alert('⚠️ Belum ada data Flash Sale untuk diupload!');
+
+    const token = document.getElementById('githubToken').value.trim();
+    if (!token) return alert('⚠️ Masukkan GitHub Token Anda!');
+
+    const content = JSON.stringify(flashProducts, null, 2);
+
+    const owner = 'WarungEmung26'; // sesuaikan
+    const repo  = 'WarungEmung';   // sesuaikan
+    const path  = 'data/flash.json';
+    const branch = 'main';
+
+    // cek SHA file kalau sudah ada
+    let sha = null;
+    try {
+      const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`, {
+        headers: { Authorization: 'token ' + token }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        sha = data.sha;
+      }
+    } catch(e) { /* file belum ada */ }
+
+    // upload / update
+    const resUpload = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+      method: 'PUT',
+      headers: { Authorization: 'token ' + token },
+      body: JSON.stringify({
+        message: sha ? 'Update flash.json' : 'Add flash.json',
+        content: btoa(unescape(encodeURIComponent(content))),
+        branch,
+        sha: sha || undefined
+      })
+    });
+
+    if (!resUpload.ok) {
+      const errBody = await resUpload.text();
+      throw new Error('HTTP ' + resUpload.status + ' — ' + errBody);
+    }
+    alert('✅ flash.json berhasil diupload ke GitHub!');
+  } catch (err) {
+    console.error('uploadFlashJSONSimple error:', err);
+    alert('❌ Upload Flash gagal: ' + (err.message || err));
+  }
+}
+
+/* ============================================================
+   LOAD FLASH DARI REPO (UNIVERSAL)
+   Bisa dipakai tombol manapun, normalisasi field otomatis
+============================================================ */
+async function loadFlashFromRepoUnified() {
+  try {
+    const token = (document.getElementById("githubToken")?.value || "").trim();
+    if (!token) return alert("⚠ Masukkan GitHub Token dulu.");
+
+    const owner = "WarungEmung26";   // sesuaikan
+    const repo  = "WarungEmung";     // sesuaikan
+    const path  = "data/flash.json"; // file repo
+    const branch = "main";
+
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`;
+
+    const res = await fetch(url, {
+      headers: {
+        "Authorization": `token ${token}`,
+        "Accept": "application/vnd.github.v3+json"
+      }
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status} — gagal ambil file`);
+
+    const data = await res.json();
+    if (!data.content) throw new Error("File tidak berisi konten");
+
+    // decode UTF-8 dari Base64
+const decoded = new TextDecoder("utf-8").decode(Uint8Array.from(atob(data.content), c => c.charCodeAt(0)));
+let json = JSON.parse(decoded);
+
+    // normalisasi field supaya renderFlashTable aman
+    json = json.map(p => ({
+      id: p.id || "flash-" + Date.now(),
+      name: p.name || p.product || "",
+      price_normal: Number(p.price_normal ?? p.price ?? 0),
+      price_flash: Number(p.price_flash ?? p.flashPrice ?? 0),
+      stock: Number(p.stock ?? 0),
+      img: p.img || p.image || "",
+      label: p.label || p.description || "",
+      flash_until: p.flash_until || p.until || "",
+      category: "flash"
+    }));
+
+    // assign global & localStorage
+    window.flashProducts = flashProducts = json;
+    localStorage.setItem("flashProducts", JSON.stringify(flashProducts));
+
+    // render tabel
+    if (typeof renderFlashTable === "function") renderFlashTable();
+
+    alert("✅ Flash Sale berhasil dimuat dari repo!");
+  } catch (err) {
+    console.error("LOAD FLASH ERROR:", err);
+    alert("❌ Gagal memuat Flash dari repo: " + (err.message || err));
+  }
+}
+
+/* ============================================================
+   Pasang tombol bottom-nav & tombol atas tabel ke fungsi ini
+============================================================ */
+const btnLoadFlashTop = document.querySelector("#tab-flash button[onclick*='loadFlashFromRepo']");
+if (btnLoadFlashTop) btnLoadFlashTop.onclick = loadFlashFromRepoUnified;
+
+const btnLoadFlashNav = document.getElementById("btnLoadFlash");
+if (btnLoadFlashNav) btnLoadFlashNav.addEventListener("click", loadFlashFromRepoUnified);
+
+/* ===== Hook tombol supaya tidak menggunakan inline onclick (lebih aman) ===== */
+document.getElementById('btnUploadProduk').addEventListener('click', uploadJSONSimple);
+document.getElementById('btnUploadFlash').addEventListener('click', uploadFlashJSONSimple);
+document.getElementById('btnLoadFlash').addEventListener('click', loadFlashFromRepoSimple);
+
+</script>
+
+
+</body>
+</html>
