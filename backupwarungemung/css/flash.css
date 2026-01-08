@@ -1,0 +1,251 @@
+/*!
+ * Copyright (c) 2025, Atos
+ * All rights reserved.
+ * Unauthorized copying, modification, or distribution of this file is strictly prohibited.
+ */
+
+/* ================= VARIABEL DARK MODE ================= */
+:root {
+  /* Flash Card */
+  --flash-bg: #fff5e8;
+  --flash-border: #ffd7a3;
+  --flash-img-border: #ffe1bc;
+  --flash-title: #333;
+  --flash-label: #777;
+  --flash-new: #e65100;
+  --flash-old: #999;
+  --flash-stock: #333;
+
+  /* Buttons */
+  --btn-minus-bg: #e57373;
+  --btn-plus-bg: #81c784;
+  --btn-add-bg: #f9a825;
+  --btn-add-color: #fff;
+
+  /* Floating Flash Button */
+  --flash-btn-bg: linear-gradient(45deg,#ff3b30,#ff6b42);
+  --flash-btn-text: #fff;
+  --flash-btn-shadow: rgba(0,0,0,0.32);
+  --flash-btn-text-shadow: rgba(0,0,0,0.4);
+}
+
+/* DARK MODE OVERRIDE */
+[data-theme="dark"] {
+  --flash-bg: #2c2c2c;
+  --flash-border: #555;
+  --flash-img-border: #444;
+  --flash-title: #e0e0e0;
+  --flash-label: #aaa;
+  --flash-new: #ffb74d;
+  --flash-old: #777;
+  --flash-stock: #e0e0e0;
+
+  --btn-minus-bg: #d32f2f;
+  --btn-plus-bg: #388e3c;
+  --btn-add-bg: #f9a825;
+  --btn-add-color: #fff;
+
+  --flash-btn-bg: linear-gradient(45deg,#d32f2f,#ff6b42);
+  --flash-btn-text: #fff;
+  --flash-btn-shadow: rgba(0,0,0,0.6);
+  --flash-btn-text-shadow: rgba(0,0,0,0.6);
+}
+
+/* ===== QTY NUMBER DARK MODE (TOMBOL TETAP WARNA) ===== */
+[data-theme="dark"] .flash-info .qty-number {
+  background: #1e1e1e;   /* kotak nomor jadi gelap */
+  color: #fff;            /* teks tetap putih */
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+
+/* tombol minus/plus tetap berwarna */
+[data-theme="dark"] .flash-info .btn-minus {
+  background: #e57373;   /* merah */
+  color: #fff;
+}
+
+[data-theme="dark"] .flash-info .btn-plus {
+  background: #81c784;   /* hijau */
+  color: #fff;
+}
+
+
+/* ================= FLASH SALE ================= */
+.flash-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 18px;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.flash-card {
+  display: flex;
+  background: var(--flash-bg);
+  border: 1px solid var(--flash-border);
+  padding: 12px;
+  border-radius: 12px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.flash-img {
+  width: 90px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 10px;
+  margin-right: 12px;
+  border: 1px solid var(--flash-img-border);
+  flex-shrink: 0;
+}
+
+.flash-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.flash-title {
+  font-size: 15px;
+  font-weight: bold;
+  color: var(--flash-title);
+}
+
+.flash-label {
+  font-size: 13px;
+  color: var(--flash-label);
+  margin-top: 4px;
+}
+
+.flash-price {
+  margin-top: 6px;
+}
+
+.flash-new {
+  font-size: 17px;
+  font-weight: bold;
+  color: var(--flash-new);
+}
+
+.flash-old {
+  font-size: 13px;
+  text-decoration: line-through;
+  color: var(--flash-old);
+  margin-left: 6px;
+}
+
+.flash-stock {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--flash-stock);
+  font-weight: 600;
+}
+
+.flash-title-section {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.flash-control-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.flash-info .btn-minus,
+.flash-info .btn-plus {
+  width: 30px;
+  height: 30px;
+  border: none;
+  color: #fff;
+  border-radius: 6px;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.flash-info .btn-minus { background: var(--btn-minus-bg); }
+.flash-info .btn-plus { background: var(--btn-plus-bg); }
+
+.flash-info .qty-number {
+  min-width: 26px;
+  text-align: center;
+  font-weight: bold;
+  color: var(--flash-stock);
+}
+
+.flash-info .add-btn {
+  width: 40px;
+  height: 40px;
+  background: var(--btn-add-bg);
+  color: var(--btn-add-color);
+  border: none;
+  border-radius: 10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* ================= FLOATING BUTTON ================= */
+#flash-btn {
+  position: fixed;
+  bottom: 85px;
+  right: 15px;
+  width: 140px;
+  height: 52px;
+  background: var(--flash-btn-bg);
+  border-radius: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  z-index: 999;
+  box-shadow: 0 6px 16px var(--flash-btn-shadow);
+  opacity: 0;
+  transform: scale(0.8);
+  pointer-events: none;
+  transition: opacity .25s ease, transform .25s ease;
+  overflow: hidden;
+  text-align: center;
+}
+
+#flash-btn.show {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%,100%{transform:scale(1);}
+  50%{transform:scale(1.05);}
+}
+
+#flash-btn img {
+  width: 26px;
+  height: 26px;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+#flash-btn .flash-text {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--flash-btn-text);
+  text-shadow: 0 1px 2px var(--flash-btn-text-shadow);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-grow: 1;
+}
+
+/* Responsive */
+@media(max-width:400px){
+  #flash-btn{width:95px;height:46px;padding:0 10px;}
+  #flash-btn img{width:22px;height:22px;}
+  #flash-btn .flash-text{font-size:13px;}
+}
