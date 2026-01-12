@@ -46,8 +46,12 @@ button{
 </head>
 
 <body>
+	<div class="top-bar">
+  <button class="secondary" onclick="goBack()"> Kembali ke Admin Produk</button>
+</div>
+	
 <div class="card">
-<h2> Admin WhatsApp</h2>
+<h2> Admin WhatsApp</h2>
 
 <label>Nomor WhatsApp</label>
 <input id="waNumber" placeholder="628xxxxxxxxxx">
@@ -210,6 +214,14 @@ pushGitHub.onclick=async()=>{
 // ==========================
 const saved=localStorage.getItem("ADMIN_WA_NUMBER");
 if(saved) waNumber.value=saved;
+
+/* ===============================
+   KEMBALI KE ADMIN
+   (ubah admin.html jika perlu)
+================================ */
+function goBack() {
+  window.location.href = "../index.html";
+}
 </script>
 </body>
 </html>
